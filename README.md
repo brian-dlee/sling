@@ -1,1 +1,1 @@
-# slingshot
+# sling
