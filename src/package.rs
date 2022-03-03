@@ -2,6 +2,7 @@ use crate::package_version;
 use crate::package_version::PackageVersion;
 use std::fs::File;
 use std::io::BufRead;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -38,6 +39,21 @@ pub(crate) struct Package {
 }
 
 impl Package {
+    pub(crate) fn from_file(path: &PathBuf) -> Option<Package> {
+        let pattern =
+            regex::Regex::new("([a-zA-Z0-9_]+)-(\\d\\.\\d\\.\\d)(\\.[a-zA-Z0-9]+)+$").unwrap();
+
+        match pattern.captures(path.file_name().unwrap().to_str().unwrap()) {
+            Some(captures) => Some(Package {
+                name: captures.get(1).unwrap().clone().as_str().to_string(),
+                version: PackageVersion::Literal(
+                    captures.get(2).unwrap().clone().as_str().to_string(),
+                ),
+            }),
+            _ => None,
+        }
+    }
+
     pub(crate) fn object_key(&self) -> String {
         format!("{}/{}", self.name, self.filename())
     }

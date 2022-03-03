@@ -16,5 +16,6 @@ regex = "1"
 serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.8"
+simple-error = "0.1"
 tempdir = "0.3.7"
 tokio = { version = "1", features = ["full"] }

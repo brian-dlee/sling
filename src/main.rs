@@ -4,7 +4,10 @@ mod index;
 mod install;
 mod package;
 mod package_version;
+mod pip;
+mod publish;
 mod runtime_config;
+mod s3;
 mod semantic_version;
 mod yaml;
 
@@ -45,6 +48,9 @@ enum Commands {
     },
 
     Put {
+        #[clap(short = 'y', long)]
+        overwrite: bool,
+
         package_path: String,
     },
 }
@@ -96,8 +102,6 @@ async fn main() -> Result<(), String> {
         RuntimeConfig::default(),
     );
 
-    println!("{:?}", runtime_config);
-
     match args.command {
         Commands::Get {
             text_files,
@@ -122,7 +126,10 @@ async fn main() -> Result<(), String> {
                 }
             }
         }
-        Commands::Put { package_path } => {
+        Commands::Put {
+            overwrite,
+            package_path,
+        } => {
             let path = std::path::PathBuf::from(package_path);
 
             if !path.exists() {
@@ -130,6 +137,13 @@ async fn main() -> Result<(), String> {
                     "Python package not found at provided location. Path={:?}",
                     path
                 ));
+            }
+
+            match publish::publish(&runtime_config, &path, overwrite).await {
+                Result::Ok(_) => (),
+                Result::Err(e) => {
+                    return Result::Err(format!("Failed to publish package. Error={}", e))
+                }
             }
         }
     }
