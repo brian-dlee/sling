@@ -1,8 +1,10 @@
 use crate::index::Index;
 use crate::package::Package;
 use crate::package_version::PackageVersion;
-use crate::{pip, s3, RuntimeConfig};
+use crate::{aws, pip, RuntimeConfig};
+use std::error::Error;
 
+use crate::storage::driver::StorageDriver;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::{Client, Region};
 use bytes::Buf;
@@ -41,6 +43,7 @@ impl std::error::Error for InstallError {}
 
 pub(crate) async fn install(
     config: &RuntimeConfig,
+    driver: &Box<dyn StorageDriver>,
     packages: Vec<Package>,
 ) -> Result<(), std::boxed::Box<dyn std::error::Error>> {
     let bucket = if config.bucket.is_none() {
@@ -53,8 +56,7 @@ pub(crate) async fn install(
     let pip_args = config.pip_args.clone().unwrap_or(String::from(""));
 
     let dir = tempdir::TempDir::new("sling-")?;
-    let client = s3::get_s3_client().await?;
-    let index = s3::build_package_index(&client, bucket.as_str()).await?;
+    let index = Index::from_storage_bucket(driver, bucket.as_str()).await?;
 
     for package in packages {
         if !index.contains(&package) {
@@ -79,8 +81,8 @@ pub(crate) async fn install(
             package.version.clone()
         };
 
-        let path = s3::download_package(
-            &client,
+        let path = download_package(
+            driver,
             bucket.as_str(),
             package.with_version(version),
             dir.path(),
@@ -96,4 +98,20 @@ pub(crate) async fn install(
     }
 
     Result::Ok(())
+}
+
+pub(crate) async fn download_package(
+    driver: &Box<dyn StorageDriver>,
+    bucket: &str,
+    package: Package,
+    dir: &Path,
+) -> Result<PathBuf, Box<dyn Error>> {
+    println!("Downloading s3://{}/{}", bucket, package.object_key());
+
+    let data = driver.get(bucket, package.object_key().as_str()).await?;
+    let target = dir.join(package.filename());
+
+    File::create(&target)?.write(data.chunk())?;
+
+    Result::Ok(target.clone())
 }

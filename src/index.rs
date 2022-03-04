@@ -2,6 +2,9 @@ use crate::package;
 use crate::package::Package;
 use crate::package_version::PackageVersion;
 use crate::semantic_version::SemanticVersion;
+use crate::storage::driver::StorageDriver;
+use regex::Regex;
+use std::error::Error;
 use std::str::FromStr;
 
 #[derive(Clone, Debug)]
@@ -11,6 +14,35 @@ pub(crate) struct Index {
 }
 
 impl Index {
+    pub(crate) async fn from_storage_bucket(
+        driver: &Box<dyn StorageDriver>,
+        bucket: &str,
+    ) -> Result<Index, Box<dyn Error>> {
+        let pattern =
+            Regex::new("([0-9a-zA-Z_]+)/[0-9a-zA-Z_]+-(\\d+\\.\\d+\\.\\d+)+\\.tar\\.gz").unwrap();
+        let mut index = Index::new();
+
+        for object in driver.list(bucket).await? {
+            let fields = if let Some(capture) = pattern.captures(&object) {
+                (capture.get(1), capture.get(2))
+            } else {
+                continue;
+            };
+
+            match fields {
+                (Some(name), Some(version)) => {
+                    index.add(Package {
+                        name: name.as_str().to_string(),
+                        version: PackageVersion::Literal(version.as_str().to_string()),
+                    });
+                }
+                _ => (),
+            };
+        }
+
+        Result::Ok(index)
+    }
+
     pub(crate) fn new() -> Index {
         Index {
             packages: std::collections::HashMap::new(),

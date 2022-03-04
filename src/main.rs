@@ -1,5 +1,7 @@
 mod active_config;
+mod aws;
 mod config;
+mod gcp;
 mod index;
 mod install;
 mod package;
@@ -7,8 +9,8 @@ mod package_version;
 mod pip;
 mod publish;
 mod runtime_config;
-mod s3;
 mod semantic_version;
+mod storage;
 mod yaml;
 
 use clap::Parser;
@@ -16,6 +18,8 @@ use clap::Subcommand;
 use dirs;
 use serde_derive::{Deserialize, Serialize};
 use serde_yaml;
+use simple_error::bail;
+use std::fmt::Formatter;
 use std::{
     fs::File,
     io::{BufRead, Write},
@@ -27,6 +31,40 @@ use tempdir;
 use crate::active_config::ActiveConfig;
 use crate::config::Config;
 use crate::runtime_config::RuntimeConfig;
+use crate::storage::driver::StorageDriver;
+use crate::storage::gs::GoogleStorageDriver;
+use crate::storage::s3::S3StorageDriver;
+
+#[derive(Clone, Debug)]
+enum StorageDriverParseError {
+    InvalidStorageDriver,
+}
+
+impl std::error::Error for StorageDriverParseError {}
+
+impl std::fmt::Display for StorageDriverParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Clone, Debug)]
+enum AvailableStorageDrivers {
+    GS,
+    S3,
+}
+
+impl FromStr for AvailableStorageDrivers {
+    type Err = StorageDriverParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "GS" => Ok(AvailableStorageDrivers::GS),
+            "S3" => Ok(AvailableStorageDrivers::S3),
+            _ => Err(StorageDriverParseError::InvalidStorageDriver),
+        }
+    }
+}
 
 #[derive(Parser, Clone, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -36,6 +74,9 @@ struct Args {
 
     #[clap(subcommand)]
     command: Commands,
+
+    #[clap(short, long)]
+    driver: AvailableStorageDrivers,
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -102,6 +143,17 @@ async fn main() -> Result<(), String> {
         RuntimeConfig::default(),
     );
 
+    let driver: Box<dyn StorageDriver> = match args.driver {
+        AvailableStorageDrivers::GS => Box::new(GoogleStorageDriver::new(
+            gcp::get_gs_client().map_err(|e| format!("failed to initialize gs driver: {}", e))?,
+        )),
+        AvailableStorageDrivers::S3 => {
+            Box::new(S3StorageDriver::new(aws::get_s3_client().await.map_err(
+                |e| format!("failed to initialize aws driver: {}", e),
+            )?))
+        }
+    };
+
     match args.command {
         Commands::Get {
             text_files,
@@ -119,7 +171,7 @@ async fn main() -> Result<(), String> {
                 }
             }
 
-            match install::install(&runtime_config, packages).await {
+            match install::install(&runtime_config, &driver, packages).await {
                 Result::Ok(_) => (),
                 Result::Err(e) => {
                     return Result::Err(format!("Failed to install package. Error={:?}", e))
@@ -139,7 +191,7 @@ async fn main() -> Result<(), String> {
                 ));
             }
 
-            match publish::publish(&runtime_config, &path, overwrite).await {
+            match publish::publish(&runtime_config, &driver, &path, overwrite).await {
                 Result::Ok(_) => (),
                 Result::Err(e) => {
                     return Result::Err(format!("Failed to publish package. Error={}", e))

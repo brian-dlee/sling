@@ -1,8 +1,12 @@
+use crate::index::Index;
 use crate::package::Package;
-use crate::{s3, RuntimeConfig};
+use crate::{aws, RuntimeConfig, StorageDriver};
 use aws_sdk_s3::types::ByteStream;
 use aws_sdk_s3::Client;
+use bytes::Bytes;
 use std::error::Error;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -34,6 +38,7 @@ impl std::error::Error for PublishError {}
 
 pub(crate) async fn publish(
     config: &RuntimeConfig,
+    driver: &Box<dyn StorageDriver>,
     path: &PathBuf,
     overwrite: bool,
 ) -> Result<(), Box<dyn Error>> {
@@ -43,8 +48,7 @@ pub(crate) async fn publish(
         config.bucket.clone().unwrap()
     };
 
-    let client = s3::get_s3_client().await?;
-    let index = s3::build_package_index(&client, bucket.as_str()).await?;
+    let index = Index::from_storage_bucket(driver, bucket.as_str()).await?;
     let package = match Package::from_file(path) {
         Some(x) => x,
         None => {
@@ -58,13 +62,13 @@ pub(crate) async fn publish(
         return Result::Err(PublishError::OverwriteDisallowedError.into());
     }
 
-    upload_package(&client, bucket.as_str(), path, &package).await?;
+    upload_package(driver, bucket.as_str(), path, &package).await?;
 
     Result::Ok(())
 }
 
 async fn upload_package(
-    client: &Client,
+    driver: &Box<dyn StorageDriver>,
     bucket: &str,
     path: &PathBuf,
     package: &Package,
@@ -76,16 +80,14 @@ async fn upload_package(
         package.object_key()
     );
 
-    let body = ByteStream::from_path(path).await.map_err(|e| {
+    let mut data = Vec::new();
+    let mut file = File::open(path).map_err(|e| {
         PublishError::UploadError(format!("failed to read package file: {}", e.to_string()))
     })?;
 
-    client
-        .put_object()
-        .bucket(bucket)
-        .key(package.object_key())
-        .body(body)
-        .send()
+    file.read_to_end(&mut data)?;
+    driver
+        .put(bucket, package.object_key().as_str(), Bytes::from(data))
         .await?;
 
     Result::Ok(())
