@@ -65,13 +65,6 @@ impl Package {
     pub(crate) fn slug(&self) -> String {
         format!("{}-{}", self.name, self.version)
     }
-
-    pub(crate) fn with_version(&self, version: PackageVersion) -> Package {
-        Package {
-            name: self.name.clone(),
-            version,
-        }
-    }
 }
 
 impl std::fmt::Display for Package {

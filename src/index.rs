@@ -3,14 +3,38 @@ use crate::package::Package;
 use crate::package_version::PackageVersion;
 use crate::semantic_version::SemanticVersion;
 use crate::storage::driver::StorageDriver;
+use crate::storage::object_ref::ObjectRef;
 use regex::Regex;
 use std::error::Error;
 use std::str::FromStr;
 
 #[derive(Clone, Debug)]
+pub(crate) struct Entry {
+    pub(crate) name: String,
+    pub(crate) version: String,
+    pub(crate) object: ObjectRef,
+}
+
+impl Entry {
+    pub(crate) fn new(name: &str, version: &str, object: &ObjectRef) -> Entry {
+        Entry {
+            name: name.to_string(),
+            version: version.to_string(),
+            object: object.clone(),
+        }
+    }
+
+    pub(crate) fn as_package(&self) -> Package {
+        Package {
+            name: self.name.clone(),
+            version: PackageVersion::Literal(self.version.clone()),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct Index {
-    packages:
-        std::collections::HashMap<String, std::collections::HashMap<String, package::Package>>,
+    entries: std::collections::HashMap<String, std::collections::HashMap<String, Entry>>,
 }
 
 impl Index {
@@ -23,7 +47,7 @@ impl Index {
         let mut index = Index::new();
 
         for object in driver.list(bucket).await? {
-            let fields = if let Some(capture) = pattern.captures(&object) {
+            let fields = if let Some(capture) = pattern.captures(object.key.as_str()) {
                 (capture.get(1), capture.get(2))
             } else {
                 continue;
@@ -31,10 +55,7 @@ impl Index {
 
             match fields {
                 (Some(name), Some(version)) => {
-                    index.add(Package {
-                        name: name.as_str().to_string(),
-                        version: PackageVersion::Literal(version.as_str().to_string()),
-                    });
+                    index.add(Entry::new(name.as_str(), version.as_str(), &object));
                 }
                 _ => (),
             };
@@ -45,12 +66,12 @@ impl Index {
 
     pub(crate) fn new() -> Index {
         Index {
-            packages: std::collections::HashMap::new(),
+            entries: std::collections::HashMap::new(),
         }
     }
 
     pub(crate) fn contains(&self, package: &package::Package) -> bool {
-        match self.packages.get(&package.name) {
+        match self.entries.get(&package.name) {
             None => false,
             Some(items) => {
                 if package.version == PackageVersion::Latest {
@@ -62,55 +83,50 @@ impl Index {
         }
     }
 
-    pub(crate) fn add(&mut self, package: Package) {
-        if !self.packages.contains_key(&package.name) {
-            self.packages
-                .insert(package.name.clone(), std::collections::HashMap::new());
+    pub(crate) fn add(&mut self, entry: Entry) {
+        if !self.entries.contains_key(&entry.name) {
+            self.entries
+                .insert(entry.name.clone(), std::collections::HashMap::new());
         }
 
-        self.packages
-            .get_mut(&package.name)
+        self.entries
+            .get_mut(&entry.name)
             .unwrap()
-            .insert(package.version.literal().unwrap(), package);
+            .insert(entry.clone().version, entry.clone());
     }
 
-    pub(crate) fn dump(&self) {
-        println!("Dumping package index");
-        for (name, versions) in self.packages.iter() {
-            for (version, package) in versions.iter() {
-                println!(" - {}@{}", name, version);
+    pub(crate) fn find_latest(&self, name: &str) -> Option<Entry> {
+        if let Some((first, remaining)) = self.get_available_versions(name).split_first() {
+            let result = remaining
+                .into_iter()
+                .fold(first, |a, b| if a.0 > b.0 { a } else { b });
+            Some(result.to_owned().1)
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn find(&self, name: &str, version: &str) -> Option<Entry> {
+        for x in self.get_available_versions(name) {
+            if x.0.to_string() == version.to_string() {
+                return Some(x.1);
             }
         }
+        return None;
     }
 
-    pub(crate) fn get_latest(&self, name: &String) -> Option<SemanticVersion> {
-        self.packages
-            .get(name)
-            .map(|x| {
-                let versions: Vec<SemanticVersion> = x
-                    .values()
-                    .map(|x| x.to_owned())
-                    .flat_map(|x| match x.version {
-                        PackageVersion::Latest => None,
-                        PackageVersion::Literal(v) => SemanticVersion::from_str(&v).ok(),
-                    })
-                    .collect();
-
-                versions.split_first().map(|(first, rest)| {
-                    rest.into_iter()
-                        .fold(
-                            first,
-                            |result, next| {
-                                if result > next {
-                                    result
-                                } else {
-                                    next
-                                }
-                            },
-                        )
-                        .clone()
+    fn get_available_versions(&self, name: &str) -> Vec<(SemanticVersion, Entry)> {
+        if let Some(entries) = self.entries.get(name) {
+            entries
+                .values()
+                .flat_map(|x| {
+                    SemanticVersion::from_str(&x.version)
+                        .map(|v| (v, x.clone()))
+                        .ok()
                 })
-            })
-            .flatten()
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 }

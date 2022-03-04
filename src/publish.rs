@@ -1,8 +1,6 @@
 use crate::index::Index;
 use crate::package::Package;
-use crate::{aws, RuntimeConfig, StorageDriver};
-use aws_sdk_s3::types::ByteStream;
-use aws_sdk_s3::Client;
+use crate::{RuntimeConfig, StorageDriver};
 use bytes::Bytes;
 use std::error::Error;
 use std::fs::File;
@@ -12,8 +10,6 @@ use std::path::PathBuf;
 #[derive(Debug)]
 enum PublishError {
     NoBucketDefined,
-    AWSRegionInvalid(String),
-    AWSError(String),
     InvalidPackage(String),
     OverwriteDisallowedError,
     UploadError(String),
@@ -23,8 +19,6 @@ impl std::fmt::Display for PublishError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::NoBucketDefined => write!(f, "no bucket was provided"),
-            Self::AWSRegionInvalid(region) => write!(f, "invalid AWS region: {}", region),
-            Self::AWSError(msg) => write!(f, "aws error: {}", msg),
             Self::InvalidPackage(path) => write!(f, "invalid package file: {}", path),
             Self::UploadError(msg) => write!(f, "package upload failed: {}", msg),
             Self::OverwriteDisallowedError => {

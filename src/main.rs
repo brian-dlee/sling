@@ -16,17 +16,8 @@ mod yaml;
 use clap::Parser;
 use clap::Subcommand;
 use dirs;
-use serde_derive::{Deserialize, Serialize};
-use serde_yaml;
-use simple_error::bail;
 use std::fmt::Formatter;
-use std::{
-    fs::File,
-    io::{BufRead, Write},
-    num::ParseIntError,
-    str::FromStr,
-};
-use tempdir;
+use std::str::FromStr;
 
 use crate::active_config::ActiveConfig;
 use crate::config::Config;
@@ -145,7 +136,9 @@ async fn main() -> Result<(), String> {
 
     let driver: Box<dyn StorageDriver> = match args.driver {
         AvailableStorageDrivers::GS => Box::new(GoogleStorageDriver::new(
-            gcp::get_gs_client().map_err(|e| format!("failed to initialize gs driver: {}", e))?,
+            gcp::get_gs_client()
+                .await
+                .map_err(|e| format!("failed to initialize gs driver: {}", e))?,
         )),
         AvailableStorageDrivers::S3 => {
             Box::new(S3StorageDriver::new(aws::get_s3_client().await.map_err(

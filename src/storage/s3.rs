@@ -1,17 +1,9 @@
-use crate::index::Index;
-use crate::package::Package;
-use crate::package_version::PackageVersion;
 use crate::storage::driver::StorageDriver;
-use aws_config::meta::region::RegionProviderChain;
+use crate::storage::object_ref::ObjectRef;
 use aws_sdk_s3::types::ByteStream;
-use aws_sdk_s3::{Client, Region};
-use bytes::{Buf, Bytes};
-use regex::Regex;
-use simple_error::bail;
+use aws_sdk_s3::Client;
+use bytes::Bytes;
 use std::error::Error;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
 
 pub(crate) struct S3StorageDriver {
     client: Client,
@@ -25,13 +17,13 @@ impl S3StorageDriver {
 
 #[async_trait::async_trait]
 impl StorageDriver for S3StorageDriver {
-    async fn list(&self, bucket: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    async fn list(&self, bucket: &str) -> Result<Vec<ObjectRef>, Box<dyn Error>> {
         let response = self.client.list_objects_v2().bucket(bucket).send().await?;
         Ok(response
             .contents()
             .unwrap_or_default()
             .iter()
-            .map(|o| o.key().map(|s| s.to_string()))
+            .map(|o| o.key().map(|s| self.get_object_ref(bucket, s)))
             .flatten()
             .collect())
     }
@@ -58,5 +50,9 @@ impl StorageDriver for S3StorageDriver {
             .await?;
 
         Result::Ok(())
+    }
+
+    fn get_protocol(&self) -> &str {
+        "s3"
     }
 }
