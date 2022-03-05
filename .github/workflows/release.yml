@@ -67,8 +67,6 @@ jobs:
           toolchain: stable
           override: true
       - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
-      - run: echo "$RELEASE"
-      - run: exit 1
       - run: test -e changelog/${{ github.ref }}.md
       - name: Release Build
         run: cargo build --release
@@ -85,6 +83,6 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          body_path: changelog/${{ github.ref }}.md
+          body_path: changelog/${RELEASE}.md
           draft: false
           prerelease: false
