@@ -5,7 +5,7 @@ use bytes::Bytes;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::Path;
 
 #[derive(Debug)]
 enum PublishError {
@@ -32,8 +32,8 @@ impl std::error::Error for PublishError {}
 
 pub(crate) async fn publish(
     config: &RuntimeConfig,
-    driver: &Box<dyn StorageDriver>,
-    path: &PathBuf,
+    driver: &'_ dyn StorageDriver,
+    path: &Path,
     overwrite: bool,
 ) -> Result<(), Box<dyn Error>> {
     let bucket = if config.bucket.is_none() {
@@ -62,9 +62,9 @@ pub(crate) async fn publish(
 }
 
 async fn upload_package(
-    driver: &Box<dyn StorageDriver>,
+    driver: &'_ dyn StorageDriver,
     bucket: &str,
-    path: &PathBuf,
+    path: &Path,
     package: &Package,
 ) -> Result<(), Box<dyn Error>> {
     println!(

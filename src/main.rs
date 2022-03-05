@@ -15,7 +15,7 @@ mod yaml;
 
 use clap::Parser;
 use clap::Subcommand;
-use dirs;
+use std::borrow::Borrow;
 use std::fmt::Formatter;
 use std::str::FromStr;
 
@@ -91,14 +91,8 @@ enum Commands {
 async fn main() -> Result<(), String> {
     let args = Args::parse();
 
-    let home_path = match dirs::home_dir() {
-        Some(path) => path,
-        None => {
-            return Result::Err(
-                "Unable to resolve the home directory on the current system.".to_string(),
-            )
-        }
-    };
+    let home_path = dirs::home_dir()
+        .ok_or_else(|| "Unable to resolve the home directory on the current system.".to_string())?;
 
     let config_path = home_path.join(".sling.yml");
 
@@ -164,7 +158,7 @@ async fn main() -> Result<(), String> {
                 }
             }
 
-            match install::install(&runtime_config, &driver, packages).await {
+            match install::install(&runtime_config, driver.borrow(), packages).await {
                 Result::Ok(_) => (),
                 Result::Err(e) => {
                     return Result::Err(format!("Failed to install package. Error={:?}", e))
@@ -184,7 +178,7 @@ async fn main() -> Result<(), String> {
                 ));
             }
 
-            match publish::publish(&runtime_config, &driver, &path, overwrite).await {
+            match publish::publish(&runtime_config, driver.borrow(), &path, overwrite).await {
                 Result::Ok(_) => (),
                 Result::Err(e) => {
                     return Result::Err(format!("Failed to publish package. Error={}", e))

@@ -14,7 +14,7 @@ impl FromStr for SemanticVersion {
     type Err = ParseSemanticVersionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<String> = s.split(".").into_iter().map(|s| s.to_string()).collect();
+        let parts: Vec<String> = s.split('.').into_iter().map(|s| s.to_string()).collect();
         let mut major: usize = 0;
         let mut minor: usize = 0;
         let mut patch: usize = 0;

@@ -39,7 +39,7 @@ pub(crate) struct Index {
 
 impl Index {
     pub(crate) async fn from_storage_bucket(
-        driver: &Box<dyn StorageDriver>,
+        driver: &'_ dyn StorageDriver,
         bucket: &str,
     ) -> Result<Index, Box<dyn Error>> {
         let pattern =
@@ -53,11 +53,8 @@ impl Index {
                 continue;
             };
 
-            match fields {
-                (Some(name), Some(version)) => {
-                    index.add(Entry::new(name.as_str(), version.as_str(), &object));
-                }
-                _ => (),
+            if let (Some(name), Some(version)) = fields {
+                index.add(Entry::new(name.as_str(), version.as_str(), &object));
             };
         }
 
@@ -98,7 +95,7 @@ impl Index {
     pub(crate) fn find_latest(&self, name: &str) -> Option<Entry> {
         if let Some((first, remaining)) = self.get_available_versions(name).split_first() {
             let result = remaining
-                .into_iter()
+                .iter()
                 .fold(first, |a, b| if a.0 > b.0 { a } else { b });
             Some(result.to_owned().1)
         } else {
@@ -108,11 +105,11 @@ impl Index {
 
     pub(crate) fn find(&self, name: &str, version: &str) -> Option<Entry> {
         for x in self.get_available_versions(name) {
-            if x.0.to_string() == version.to_string() {
+            if x.0.to_string() == *version {
                 return Some(x.1);
             }
         }
-        return None;
+        None
     }
 
     fn get_available_versions(&self, name: &str) -> Vec<(SemanticVersion, Entry)> {

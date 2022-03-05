@@ -35,7 +35,7 @@ impl std::error::Error for InstallError {}
 
 pub(crate) async fn install(
     config: &RuntimeConfig,
-    driver: &Box<dyn StorageDriver>,
+    driver: &'_ dyn StorageDriver,
     packages: Vec<Package>,
 ) -> Result<(), std::boxed::Box<dyn std::error::Error>> {
     let bucket = if config.bucket.is_none() {
@@ -44,8 +44,11 @@ pub(crate) async fn install(
         config.bucket.clone().unwrap()
     };
 
-    let python = config.python.clone().unwrap_or(String::from("python"));
-    let pip_args = config.pip_args.clone().unwrap_or(String::from(""));
+    let python = config
+        .python
+        .clone()
+        .unwrap_or_else(|| String::from("python"));
+    let pip_args = config.pip_args.clone().unwrap_or_else(|| String::from(""));
 
     let dir = tempdir::TempDir::new("sling-")?;
     let index = Index::from_storage_bucket(driver, bucket.as_str()).await?;
@@ -59,18 +62,16 @@ pub(crate) async fn install(
                     package.name.clone().to_string(),
                 ))
             }
+        } else if let Some(latest) = index.find_latest(&package.name) {
+            println!(
+                "Resolved package version: {}@latest -> {}@{}",
+                package.name, latest.name, latest.version
+            );
+            Ok(latest)
         } else {
-            if let Some(latest) = index.find_latest(&package.name) {
-                println!(
-                    "Resolved package version: {}@latest -> {}@{}",
-                    package.name, latest.name, latest.version
-                );
-                Ok(latest)
-            } else {
-                Err(InstallError::VersionResolutionFailed(
-                    package.name.clone().to_string(),
-                ))
-            }
+            Err(InstallError::VersionResolutionFailed(
+                package.name.clone().to_string(),
+            ))
         }?;
 
         let package = object.as_package();
@@ -91,7 +92,7 @@ pub(crate) async fn install(
 }
 
 pub(crate) async fn download_package(
-    driver: &Box<dyn StorageDriver>,
+    driver: &'_ dyn StorageDriver,
     entry: Entry,
     target: &Path,
 ) -> Result<(), Box<dyn Error>> {
@@ -101,7 +102,7 @@ pub(crate) async fn download_package(
         .get(entry.object.bucket.as_str(), entry.object.key.as_str())
         .await?;
 
-    File::create(&target)?.write(data.chunk())?;
+    File::create(&target)?.write_all(data.chunk())?;
 
     Result::Ok(())
 }

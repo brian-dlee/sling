@@ -40,16 +40,17 @@ impl GoogleStorageDriver {
 impl StorageDriver for GoogleStorageDriver {
     async fn list(&self, bucket: &str) -> Result<Vec<ObjectRef>, Box<dyn Error>> {
         let (_, objects) = handle_error(self.client.objects().list(bucket).doit().await)?;
-        let mut items: Vec<ObjectRef> = Vec::new();
+        let mut result: Vec<ObjectRef> = Vec::new();
 
-        for result in objects.items {
-            for object in result {
+        if let Some(items) = objects.items {
+            for object in items {
                 if let Some(name) = object.name {
-                    items.push(self.get_object_ref(bucket, name.as_str()));
+                    result.push(self.get_object_ref(bucket, name.as_str()));
                 }
             }
         }
-        Ok(items)
+
+        Ok(result)
     }
 
     async fn get(&self, bucket: &str, key: &str) -> Result<Bytes, Box<dyn Error>> {

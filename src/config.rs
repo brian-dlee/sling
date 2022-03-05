@@ -9,9 +9,9 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub fn load(path: &std::path::PathBuf) -> Result<Config, Box<dyn std::error::Error>> {
+    pub fn load(path: &std::path::Path) -> Result<Config, Box<dyn std::error::Error>> {
         if path.exists() {
-            yaml::read_yaml(&path)
+            yaml::read_yaml(path)
         } else {
             Result::Ok(Config {
                 default_bucket_name: None,
@@ -29,7 +29,7 @@ impl Config {
         }
     }
 
-    pub fn save(&self, path: &std::path::PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        yaml::write_yaml(&path, self)
+    pub fn save(&self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+        yaml::write_yaml(path, self)
     }
 }

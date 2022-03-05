@@ -20,7 +20,7 @@ impl ActiveConfig {
 
     pub fn save(
         &self,
-        path: &std::path::PathBuf,
+        path: &std::path::Path,
     ) -> Result<(), std::boxed::Box<dyn std::error::Error>> {
         if !self.dirty {
             Ok(())
@@ -29,7 +29,7 @@ impl ActiveConfig {
         }
     }
 
-    pub fn mutate<F: FnOnce(&mut Config) -> ()>(&mut self, f: F) -> bool {
+    pub fn mutate<F: FnOnce(&mut Config)>(&mut self, f: F) -> bool {
         let previous = self.config.clone();
         f(&mut self.config);
         self.dirty = self.dirty || self.config != previous;

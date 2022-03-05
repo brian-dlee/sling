@@ -1,11 +1,11 @@
 use std::error::Error;
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::Command;
 
 pub(crate) fn install_package(
-    python: &String,
-    pip_args: &String,
-    path: &PathBuf,
+    python: &str,
+    pip_args: &str,
+    path: &Path,
 ) -> Result<(), Box<dyn Error>> {
     let path = path.to_str().unwrap();
     let extra: Vec<&str> = pip_args
