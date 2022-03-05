@@ -6,8 +6,47 @@ on:
 name: Release
 
 jobs:
-  release:
-    name: Release
+  check:
+    name: Check Release
+    env:
+      PROJECT_NAME_UNDERSCORE: sling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
+      - run: test -e changelog/${RELEASE}.md
+  release-draft:
+    name: Draft Release
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
+      - run: test -e changelog/${RELEASE}.md
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ env.RELEASE }}
+          body_path: changelog/${{ env.RELEASE }}.md
+          draft: false
+          prerelease: false
+  build:
+    name: Build
+    needs: release-draft
     env:
       PROJECT_NAME_UNDERSCORE: sling
     runs-on: ${{ matrix.os }}
@@ -30,21 +69,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
-      - run: test -e changelog/${RELEASE}.md
       - name: Release Build
-        run: cargo build --release --locked
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ env.RELEASE }}
-          body_path: changelog/${{ env.RELEASE }}.md
-          draft: false
-          prerelease: false
+        run: cargo build --release
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
