@@ -2,8 +2,8 @@ on:
   workflow_run:
     workflows:
       - "Test"
-    branches:
-      - main
+    tags:
+      - /^v\d+\.\d+\.\d+$/
     types:
       - completed
 
@@ -23,6 +23,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - run: test -e changelog/${{ github.ref }}.md
       - name: Release Build
         run: cargo build --release
       - name: 'Upload Artifact'
@@ -30,3 +31,14 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME_UNDERSCORE }}
           path: target/release/${{ env.PROJECT_NAME_UNDERSCORE }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body_path: changelog/${{ github.ref }}.md
+          draft: false
+          prerelease: false
