@@ -67,7 +67,7 @@ jobs:
           toolchain: stable
           override: true
       - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
-      - run: test -e changelog/${{ github.ref }}.md
+      - run: test -e changelog/${RELEASE}.md
       - name: Release Build
         run: cargo build --release
       - name: 'Upload Artifact'
