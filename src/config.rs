@@ -33,3 +33,25 @@ impl Config {
         yaml::write_yaml(path, self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_as_runtime_config() {
+        let config = Config {
+            default_bucket_name: Some("abc".to_string()),
+            default_pip_args: None,
+            default_python_interpreter: None,
+        };
+        assert_eq!(
+            config.as_runtime_config(),
+            RuntimeConfig {
+                bucket: Some("abc".to_string()),
+                pip_args: None,
+                python: None,
+            }
+        );
+    }
+}
