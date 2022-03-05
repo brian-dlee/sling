@@ -4,7 +4,7 @@ on:
     branches:
       - main
     tags:
-      - /^v\d+\.\d+\.\d+$/
+      - release/*
 
 
 name: Check and Lint

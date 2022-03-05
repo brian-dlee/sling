@@ -3,7 +3,7 @@ on:
     workflows:
       - "Test"
     tags:
-      - /^v\d+\.\d+\.\d+$/
+      - release/*
     types:
       - completed
 
@@ -23,6 +23,9 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - run: echo "RELEASE=$(echo "${{ github.ref }}" | sed -i 's|release/||')" >>$GITHUB_ENV
+      - run: echo "$RELEASE"
+      - run: exit 1
       - run: test -e changelog/${{ github.ref }}.md
       - name: Release Build
         run: cargo build --release
