@@ -68,6 +68,19 @@ jobs:
           override: true
       - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
       - run: test -e changelog/${RELEASE}.md
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-dependencies
+        with:
+          path: |
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            target
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
       - name: Release Build
         run: cargo build --release
       - name: 'Upload Artifact'
