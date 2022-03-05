@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - release/*
 
 name: Test with Code Coverage
 
