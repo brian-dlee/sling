@@ -2,10 +2,6 @@ name: Check + Lint + Test
 
 on:
   workflow_call:
-    inputs:
-      cache_key:
-        required: true
-        type: string
 
 jobs:
   check:
@@ -81,7 +77,7 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             target
-          key: ${{ input.cache_key }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
       - name: Generate test result and coverage report
         run: |
           cargo install cargo2junit grcov;
