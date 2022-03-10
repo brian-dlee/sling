@@ -15,8 +15,8 @@ jobs:
       - uses: actions/checkout@v2
       - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
       - run: test -e changelog/${RELEASE}.md
-  draft:
-    name: Draft Release
+  release:
+    name: Release
     needs: check
     runs-on: ubuntu-latest
     steps:
@@ -25,12 +25,13 @@ jobs:
       - run: test -e changelog/${RELEASE}.md
       - name: Create Release
         uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          bodyFile: changelog/${{ env.RELEASE }}.md
-          tag: ${{ github.ref }}
-          name: Release ${{ env.RELEASE }}
-          draft: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          body_path: changelog/${{ env.RELEASE }}.md
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ env.RELEASE }}
+
   build:
     name: Build
     needs: draft
@@ -70,22 +71,4 @@ jobs:
           file: target/release/${{ matrix.artifact_name }}
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
-  publish:
-    name: Publish
-    needs: build
-    env:
-      PROJECT_NAME_UNDERSCORE: sling
-    runs-on: ubuntu-latest
-    steps:
-      - name: Publish release
-        uses: actions/create-release@v1
-        with:
-          allowUpdates: true
-          omitBodyDuringUpdate: true
-          omitNameDuringUpdate: true
-          omitPrereleaseDuringUpdate: true
-          tag: ${{ github.ref }}
-          name: Release ${{ env.RELEASE }}
-          draft: false
-          token: ${{ secrets.GITHUB_TOKEN }}
 
