@@ -10,4 +10,5 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/workflows/analyze
+      - uses: actions/checkout@v2
+      - uses: ./.github/workflows/analyze.yml

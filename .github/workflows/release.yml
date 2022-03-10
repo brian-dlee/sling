@@ -20,7 +20,8 @@ jobs:
     name: Code Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/workflows/analyze
+      - uses: actions/checkout@v2
+      - uses: ./.github/workflows/analyze.yml
 
   release:
     name: Release
@@ -74,12 +75,10 @@ jobs:
         run: sudo apt-get install -y musl-tools
       - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
-      - name: Find binaries
-        run: find target
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: target/${{ matrix.target }}/release/${{ matrix.artifact }}
-          asset_name: ${{ matrix.asset_name }}
+          asset_name: ${{ matrix.asset }}
           tag: ${{ github.ref }}
