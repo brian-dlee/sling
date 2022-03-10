@@ -11,4 +11,3 @@ jobs:
     uses: ./.github/workflows/analyze.yml
     with:
       cache_key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
-
