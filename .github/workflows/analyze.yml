@@ -1,5 +1,15 @@
 on:
   workflow_call:
+    inputs:
+      cache_key:
+        required: true
+        type: string
+
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+      CODECOV_TOKEN:
+        required: true
 
 name: Check + Lint + Test
 
@@ -77,7 +87,7 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ input.cache_key }}
       - name: Generate test result and coverage report
         run: |
           cargo install cargo2junit grcov;
