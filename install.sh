@@ -7,7 +7,7 @@ function get_latest_release_download_url() {
 
     while read -r url; do
         echo "$url" | sed 's|releases/tag|releases/download|' >"$dir/$(basename "$url" | tr -d 'v')"
-    done < <(grep 'html_url' </dev/stdin | grep -E 'release/v\d+\.\d+\.\d+"' | awk '{ print $2 }' | tr -d '",')
+    done < <(grep 'html_url' </dev/stdin | grep -E 'release/v[0-9]+\.[0-9]+\.[0-9]+"' | awk '{ print $2 }' | tr -d '",')
 
     if [[ $(ls -1 "$dir" | wc -l) -eq 0 ]]; then
         echo "No releases available" >&2
@@ -47,7 +47,7 @@ if [[ -z "$INSTALL_DIR" ]]; then
 fi
 
 echo "Downloading $download_url -> $INSTALL_DIR/sling" >&2
-curl --output-dir "$INSTALL_DIR" -o "sling" -sSL "$download_url"
+curl -o "$INSTALL_DIR/sling" -sSL "$download_url"
 chmod +x "$INSTALL_DIR/sling"
 
 echo "$INSTALL_DIR/sling"
