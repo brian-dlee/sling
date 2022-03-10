@@ -2,6 +2,17 @@
 
 Distribute python packages using cloud storage services
 
+## Quick Install
+
+_Supported on MacOS + Linux + WSL with Bash installed_
+
+Environment variable reference for convenience script:
+  - `INSTALL_DIR`: Control where the script installs the `sling` binary
+
+```shell
+curl -sSL https://raw.githubusercontent.com/brian-dlee/sling/release/v0.1.0/install.sh | bash
+```
+
 ## Cloud Providers support
 
  - Google Storage - `--driver gs`
