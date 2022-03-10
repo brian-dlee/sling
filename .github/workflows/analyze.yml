@@ -1,3 +1,5 @@
+name: Check + Lint + Test
+
 on:
   workflow_call:
     inputs:
@@ -10,8 +12,6 @@ on:
         required: true
       CODECOV_TOKEN:
         required: true
-
-name: Check + Lint + Test
 
 jobs:
   check:
