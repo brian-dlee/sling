@@ -62,6 +62,9 @@ jobs:
           target: ${{ matrix.target }}
           toolchain: stable
           override: true
+      - name: Install Dependencies (Linux)
+        if: ${{ contains(matrix.os, "ubuntu") }}
+        run: sudo apt-get install -y musl-tools
       - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
       - name: Upload binaries to release
