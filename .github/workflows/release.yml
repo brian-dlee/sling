@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
       - run: test -e changelog/${RELEASE}.md
-  release-draft:
+  draft:
     name: Draft Release
     needs: check
     runs-on: ubuntu-latest
@@ -24,13 +24,68 @@ jobs:
       - run: echo "RELEASE=$(basename "${{ github.ref }}")" >>$GITHUB_ENV
       - run: test -e changelog/${RELEASE}.md
       - name: Create Release
-        id: create_release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ env.RELEASE }}
-          body_path: changelog/${{ env.RELEASE }}.md
+          bodyFile: changelog/${{ env.RELEASE }}.md
+          tag: ${{ github.ref }}
+          name: Release ${{ env.RELEASE }}
+          draft: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+  build:
+    name: Build
+    needs: draft
+    env:
+      PROJECT_NAME_UNDERSCORE: sling
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: sling-windows-amd64
+            artifact: sling.exe
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            asset: sling-linux-amd64
+            artifact: sling
+            target: x86_64-unknown-linux-musl
+          - os: macos-latest
+            asset: sling-macos-amd64
+            artifact: sling
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          target: ${{ matrix.target }}
+          toolchain: stable
+          override: true
+      - name: Build release
+        run: cargo build --release
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/${{ matrix.artifact_name }}
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+  publish:
+    name: Publish
+    needs: build
+    env:
+      PROJECT_NAME_UNDERSCORE: sling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        uses: actions/create-release@v1
+        with:
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          tag: ${{ github.ref }}
+          name: Release ${{ env.RELEASE }}
           draft: false
-          prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
