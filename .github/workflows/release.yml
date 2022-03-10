@@ -34,7 +34,7 @@ jobs:
 
   build:
     name: Build
-    needs: draft
+    needs: release
     env:
       PROJECT_NAME_UNDERSCORE: sling
     runs-on: ${{ matrix.os }}
