@@ -69,8 +69,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Release Build
-        run: cargo build --release
+      - name: Rust MUSL Builder
+        uses: NSCoder/rust-musl-action@v1.0.0
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
