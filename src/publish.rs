@@ -69,15 +69,14 @@ async fn upload_package(
 ) -> Result<(), Box<dyn Error>> {
     println!(
         "Uploading package to S3: {} -> s3://{}/{}",
-        path.to_str().unwrap().to_string(),
+        path.to_str().unwrap(),
         bucket,
         package.object_key()
     );
 
     let mut data = Vec::new();
-    let mut file = File::open(path).map_err(|e| {
-        PublishError::UploadError(format!("failed to read package file: {}", e.to_string()))
-    })?;
+    let mut file = File::open(path)
+        .map_err(|e| PublishError::UploadError(format!("failed to read package file: {}", e)))?;
 
     file.read_to_end(&mut data)?;
     driver

@@ -146,7 +146,7 @@ async fn main() -> Result<(), String> {
             text_files,
             mut packages,
         } => {
-            for f in text_files.iter().map(|x| std::path::PathBuf::from(x)) {
+            for f in text_files.iter().map(std::path::PathBuf::from) {
                 match package::read_packages_from_file(&f) {
                     Result::Ok(mut new) => packages.append(&mut new),
                     Result::Err(e) => {

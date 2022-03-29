@@ -35,7 +35,7 @@ pub(crate) struct Package {
 impl Package {
     pub(crate) fn from_file(path: &Path) -> Option<Package> {
         let pattern =
-            regex::Regex::new("([a-zA-Z0-9_]+)-(\\d\\.\\d\\.\\d)(\\.[a-zA-Z0-9]+)+$").unwrap();
+            regex::Regex::new("([a-zA-Z0-9_]+)-(\\d+\\.\\d+\\.\\d+)(\\.[a-zA-Z0-9]+)+$").unwrap();
 
         pattern
             .captures(path.file_name().unwrap().to_str().unwrap())

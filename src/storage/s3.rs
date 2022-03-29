@@ -23,8 +23,7 @@ impl StorageDriver for S3StorageDriver {
             .contents()
             .unwrap_or_default()
             .iter()
-            .map(|o| o.key().map(|s| self.get_object_ref(bucket, s)))
-            .flatten()
+            .filter_map(|o| o.key().map(|s| self.get_object_ref(bucket, s)))
             .collect())
     }
 
