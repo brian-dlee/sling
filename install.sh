@@ -14,7 +14,7 @@ function get_latest_release_download_url() {
         return 1
     fi
 
-    echo "$(cat "$dir/$(ls -1 "$dir" | sort -n | head -n1)")/$1"
+    echo "$(cat "$dir/$(ls -1 "$dir" | sort -n | tail -n1)")/$1"
 }
 
 set -e
