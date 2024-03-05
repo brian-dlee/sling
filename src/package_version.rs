@@ -1,7 +1,9 @@
+use crate::package::Specifier;
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum PackageVersion {
     Latest,
-    Literal(String),
+    Literal(Specifier),
 }
 
 impl std::fmt::Display for PackageVersion {
