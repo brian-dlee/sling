@@ -58,6 +58,10 @@ jobs:
             asset: sling-macos-amd64
             artifact: sling
             target: x86_64-apple-darwin
+          - os: macos-latest
+            asset: sling-macos-aarch64
+            artifact: sling
+            target: aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
