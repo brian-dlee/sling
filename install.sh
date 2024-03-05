@@ -22,6 +22,7 @@ set -e
 target_arch=
 case "$(uname -m)" in
 x86_64) target_arch="amd64";;
+arm64) target_arch="aarch64";;
 *) echo "Unsupported CPU architecture: $(uname -m)" >&2; exit 1;;
 esac
 
